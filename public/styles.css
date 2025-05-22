@@ -1,0 +1,10 @@
+body {
+  font-family: 'Arial', sans-serif;
+}
+textarea {
+  transition: border-color 0.2s;
+}
+textarea:focus {
+  border-color: #3b82f6;
+  outline: none;
+}
