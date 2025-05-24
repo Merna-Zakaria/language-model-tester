@@ -3,7 +3,7 @@ import axios from 'axios';
 
 const App = () => {
   const [prompt, setPrompt] = useState('');
-  const [model, setModel] = useState('meta-llama/Llama-2-7b-chat-hf');
+  const [model, setModel] = useState('mistralai/Mistral-7B-Instruct-v0.3');
   const [response, setResponse] = useState('');
   const [evaluation, setEvaluation] = useState('');
   const [score, setScore] = useState(null);
@@ -11,8 +11,7 @@ const App = () => {
   const [loading, setLoading] = useState(false);
 
   const models = {
-    'Llama-2-7B-Chat': 'meta-llama/Llama-2-7b-chat-hf',
-    // 'Mistral-7B-Instruct': 'mistralai/Mistral-7B-Instruct-v0.3'
+    'Mistral-7B-Instruct': 'mistralai/Mistral-7B-Instruct-v0.3'
   };
 
   const evaluateResponse = (prompt, response) => {
@@ -20,10 +19,11 @@ const App = () => {
     const responseWords = new Set(response.toLowerCase().split(/\s+/));
     const commonWords = [...promptWords].filter(word => responseWords.has(word)).length;
     const keywordScore = promptWords.size > 0 ? commonWords / promptWords.size : 0;
-    const lengthScore = response.split(/\s+/).length > 10;
+    const lengthScore = response.split(/\s+/).length > 1;
     const failurePhrases = ["i don't know", "sorry", "not sure", "cannot help"];
     const coherenceScore = !failurePhrases.some(phrase => response.toLowerCase().includes(phrase));
     const understood = keywordScore > 0.3 && lengthScore && coherenceScore;
+    console.log('keywordScore > 0.3 && lengthScore && coherenceScore', keywordScore > 0.3 , lengthScore , coherenceScore)
     return { result: understood ? '✔✔ Understood' : '❌ Not Understood', keywordScore };
   };
 
@@ -34,8 +34,9 @@ const App = () => {
       const res = await axios.post(
         `https://api-inference.huggingface.co/models/${model}`,
         { inputs: prompt, parameters: { max_new_tokens: 200, temperature: 0.7 } },
-        { headers: { Authorization: `Bearer ${process.env.HF_TOKEN || 'your_hugging_face_token_here'}` } }
+        { headers: { Authorization: `Bearer ${import.meta.env.VITE_HUGGING_FACE_TOKEN}` } }
       );
+      console.log('res', res)
       const generatedText = res.data[0]?.generated_text || res.data.generated_text || 'Error: No response';
       const evalResult = evaluateResponse(prompt, generatedText);
       setResponse(generatedText);
@@ -43,6 +44,7 @@ const App = () => {
       setScore(evalResult.keywordScore);
       setHistory([{ prompt, response: generatedText, evaluation: evalResult.result }, ...history]);
     } catch (error) {
+      console.log('err', error)
       setResponse(`Error: ${error.message}`);
       setEvaluation('❌ Error');
       setScore(0);
@@ -50,7 +52,12 @@ const App = () => {
     setLoading(false);
   };
 
-  const handleClearHistory = () => setHistory([]);
+  const handleClearHistory = () => {
+    setEvaluation('');
+    setResponse('')
+    setPrompt('')
+    setHistory([]);
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center p-4">
